@@ -248,9 +248,10 @@ public class HypixelItemsClient implements ClientModInitializer {
     private static void say(String message) {
         Minecraft mc = Minecraft.getInstance();
         mc.execute(() -> {
-            if (mc.inGameHud != null) {
-                mc.inGameHud.getChatHud().addMessage(
-                    Component.literal("[Hypixel Items] " + message)
+            if (mc.player != null) {
+                mc.getChatListener().handleSystemMessage(
+                    Component.literal("[Hypixel Items] " + message),
+                    false
                 );
             }
         });
