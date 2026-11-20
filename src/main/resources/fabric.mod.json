@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "hypixel_items",
+  "version": "${version}",
+  "name": "Hypixel SkyBlock Items",
+  "description": "A single-player item browser/giver using public Hypixel SkyBlock item definitions.",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.example.hypixelitems.HypixelItemsClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "26.2",
+    "fabric-api": "*"
+  }
+}
