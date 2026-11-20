@@ -1,4 +1,3 @@
-
 package com.example.hypixelitems;
 
 import com.google.gson.JsonArray;
@@ -12,12 +11,14 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.Items;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -47,40 +48,32 @@ public class HypixelItemsClient implements ClientModInitializer {
                 dispatcher.register(
                     ClientCommands.literal("hypixel")
 
-                    .then(ClientCommands.literal("reload")
-                        .executes(ctx -> {
-                            fetchItems();
-                            say("Downloading Hypixel items...");
-                            return 1;
-                        }))
+                        .then(ClientCommands.literal("reload")
+                            .executes(ctx -> {
+                                fetchItems();
+                                say("Downloading Hypixel items...");
+                                return 1;
+                            }))
 
-                    .then(ClientCommands.literal("give")
-                        .then(ClientCommands.argument(
-                            "item_id",
-                            StringArgumentType.word()
-                        ).executes(ctx ->
-                            giveItem(
-                                StringArgumentType.getString(ctx, "item_id")
-                            )
-                        )))
+                        .then(ClientCommands.literal("give")
+                            .then(ClientCommands.argument("item_id", StringArgumentType.word())
+                                .executes(ctx -> giveItem(
+                                    StringArgumentType.getString(ctx, "item_id")
+                                ))))
 
-                    .then(ClientCommands.literal("search")
-                        .then(ClientCommands.argument(
-                            "name",
-                            StringArgumentType.greedyString()
-                        ).executes(ctx ->
-                            search(
-                                StringArgumentType.getString(ctx, "name")
-                            )
-                        )))
+                        .then(ClientCommands.literal("search")
+                            .then(ClientCommands.argument("name", StringArgumentType.greedyString())
+                                .executes(ctx -> search(
+                                    StringArgumentType.getString(ctx, "name")
+                                ))))
 
-                    .then(ClientCommands.literal("help")
-                        .executes(ctx -> {
-                            say("/hypixel reload");
-                            say("/hypixel search Hyperion");
-                            say("/hypixel give HYPERION");
-                            return 1;
-                        }))
+                        .then(ClientCommands.literal("help")
+                            .executes(ctx -> {
+                                say("/hypixel reload");
+                                say("/hypixel search Hyperion");
+                                say("/hypixel give HYPERION");
+                                return 1;
+                            }))
                 );
             }
         );
@@ -89,7 +82,6 @@ public class HypixelItemsClient implements ClientModInitializer {
     }
 
     private static void fetchItems() {
-
         Thread thread = new Thread(() -> {
             try {
                 HttpClient client = HttpClient.newBuilder()
@@ -97,17 +89,15 @@ public class HypixelItemsClient implements ClientModInitializer {
                     .build();
 
                 HttpRequest request = HttpRequest.newBuilder(
-                    URI.create(API)
-                )
+                        URI.create(API)
+                    )
                     .timeout(Duration.ofSeconds(30))
                     .header("User-Agent", "HypixelItemsFabric/1.0")
                     .GET()
                     .build();
 
-                HttpResponse<String> response = client.send(
-                    request,
-                    HttpResponse.BodyHandlers.ofString()
-                );
+                HttpResponse<String> response =
+                    client.send(request, HttpResponse.BodyHandlers.ofString());
 
                 if (response.statusCode() != 200) {
                     say("API Error: HTTP " + response.statusCode());
@@ -133,14 +123,12 @@ public class HypixelItemsClient implements ClientModInitializer {
                 }
 
                 loaded = true;
-
                 say("Loaded " + ITEMS.size() + " Hypixel items!");
                 say("Try /hypixel search Hyperion");
 
             } catch (Exception e) {
                 say("Download failed: " + e.getMessage());
             }
-
         }, "Hypixel-Items-API");
 
         thread.setDaemon(true);
@@ -148,7 +136,6 @@ public class HypixelItemsClient implements ClientModInitializer {
     }
 
     private static int search(String query) {
-
         if (!loaded) {
             say("Database loading. Try again shortly.");
             return 0;
@@ -158,21 +145,16 @@ public class HypixelItemsClient implements ClientModInitializer {
         int found = 0;
 
         for (Map.Entry<String, JsonObject> entry : ITEMS.entrySet()) {
-
             JsonObject item = entry.getValue();
-
             String name = item.get("name").getAsString();
 
             if (name.toLowerCase(Locale.ROOT).contains(needle)
-                || entry.getKey().toLowerCase(Locale.ROOT).contains(needle)) {
+                    || entry.getKey().toLowerCase(Locale.ROOT).contains(needle)) {
 
-                say(
-                    entry.getKey() + " - " + name
-                    + " [" + getString(item, "tier", "UNKNOWN") + "]"
-                );
+                say(entry.getKey() + " - " + name
+                    + " [" + getString(item, "tier", "UNKNOWN") + "]");
 
                 found++;
-
                 if (found >= 12) break;
             }
         }
@@ -185,21 +167,18 @@ public class HypixelItemsClient implements ClientModInitializer {
     }
 
     private static int giveItem(String id) {
-
         if (!loaded) {
             say("Database is still loading.");
             return 0;
         }
 
         JsonObject data = ITEMS.get(id.toUpperCase(Locale.ROOT));
-
         if (data == null) {
             say("Unknown item ID. Search first!");
             return 0;
         }
 
         Minecraft mc = Minecraft.getInstance();
-
         if (mc.player == null) {
             say("You must be in a single-player world.");
             return 0;
@@ -210,10 +189,13 @@ public class HypixelItemsClient implements ClientModInitializer {
 
         Identifier key = Identifier.withDefaultNamespace(material);
 
-        Item item = BuiltInRegistries.ITEM.get(key);
+        // Fixed: Unwrap Optional<Holder.Reference<Item>> cleanly and fallback to PAPER
+        Item item = BuiltInRegistries.ITEM.get(key)
+            .map(Holder::value)
+            .orElse(Items.PAPER);
 
-        if (item == null || item == net.minecraft.world.item.Items.AIR) {
-            item = net.minecraft.world.item.Items.PAPER;
+        if (item == Items.AIR) {
+            item = Items.PAPER;
         }
 
         ItemStack stack = new ItemStack(item);
@@ -227,36 +209,29 @@ public class HypixelItemsClient implements ClientModInitializer {
         );
 
         boolean added = mc.player.getInventory().add(stack);
-
         if (!added) {
             mc.player.drop(stack, false);
         }
 
         say("Gave " + name + " (" + id + ")");
         say("This is a vanilla item representation.");
-
         sayStats(data);
 
         return 1;
     }
 
     private static void sayStats(JsonObject data) {
-
-        if (!data.has("stats")
-            || !data.get("stats").isJsonObject()) {
+        if (!data.has("stats") || !data.get("stats").isJsonObject()) {
             return;
         }
 
         JsonObject stats = data.getAsJsonObject("stats");
-
         StringBuilder line = new StringBuilder("Stats: ");
 
         for (Map.Entry<String, JsonElement> stat : stats.entrySet()) {
-
             if (line.length() > 7) {
                 line.append(", ");
             }
-
             line.append(stat.getKey())
                 .append(" ")
                 .append(stat.getValue().getAsString());
@@ -265,24 +240,20 @@ public class HypixelItemsClient implements ClientModInitializer {
         say(line.toString());
     }
 
-    private static String getString(
-        JsonObject obj,
-        String key,
-        String fallback
-    ) {
+    private static String getString(JsonObject obj, String key, String fallback) {
         return obj.has(key) && !obj.get(key).isJsonNull()
             ? obj.get(key).getAsString()
             : fallback;
     }
 
     private static void say(String message) {
-
         Minecraft mc = Minecraft.getInstance();
-
         if (mc.player != null) {
+            // Fixed: Use displayClientMessage on LocalPlayer instead of non-existent mc.gui.getChat()
             mc.execute(() ->
-                mc.gui.getChat().addMessage(
-                    Component.literal("[Hypixel Items] " + message)
+                mc.player.displayClientMessage(
+                    Component.literal("[Hypixel Items] " + message),
+                    false
                 )
             );
         }
