@@ -189,7 +189,6 @@ public class HypixelItemsClient implements ClientModInitializer {
 
         Identifier key = Identifier.withDefaultNamespace(material);
 
-        // Fixed: Unwrap Optional<Holder.Reference<Item>> cleanly and fallback to PAPER
         Item item = BuiltInRegistries.ITEM.get(key)
             .map(Holder::value)
             .orElse(Items.PAPER);
@@ -248,14 +247,12 @@ public class HypixelItemsClient implements ClientModInitializer {
 
     private static void say(String message) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            // Fixed: Use displayClientMessage on LocalPlayer instead of non-existent mc.gui.getChat()
-            mc.execute(() ->
-                mc.player.displayClientMessage(
-                    Component.literal("[Hypixel Items] " + message),
-                    false
-                )
-            );
-        }
+        mc.execute(() -> {
+            if (mc.inGameHud != null) {
+                mc.inGameHud.getChatHud().addMessage(
+                    Component.literal("[Hypixel Items] " + message)
+                );
+            }
+        });
     }
 }
